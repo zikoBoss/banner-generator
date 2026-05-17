@@ -19,7 +19,7 @@ app.add_middleware(
 
 # --- CONFIG ---
 API_KEY = "ziko"  # المفتاح السري
-INFO_API_URL = "https://sheihk-anamul-info-ob53.vercel.app/player-info"
+INFO_API_URL = "http://203.57.85.58:2035/player-info"
 ITEM_API_URL = "https://mafu-icon-api.onrender.com/icon?key=MAFU&item_id="
 FONT_FILE = "NotoSans-Bold.ttf"
 
