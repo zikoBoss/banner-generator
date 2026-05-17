@@ -157,7 +157,7 @@ async def get_banner(uid: str, key: str):
         raise HTTPException(status_code=400, detail="UID required")
 
     try:
-        resp = await client.get(f"{INFO_API_URL}?uid={uid}")
+        resp = await client.get(f"{INFO_API_URL}?uid={uid}&key=@yashapis")
         resp.raise_for_status()
         data = resp.json()
 
