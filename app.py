@@ -19,7 +19,7 @@ app.add_middleware(
 
 # --- CONFIG ---
 API_KEY = "ziko"  # المفتاح السري
-INFO_API_URL = "http://203.57.85.58:2035/player-info"
+INFO_API_URL = "https://ajay-new-all-region-info-api.vercel.app/ajay-info"
 ITEM_API_URL = "https://mafu-icon-api.onrender.com/icon?key=MAFU&item_id="
 FONT_FILE = "NotoSans-Bold.ttf"
 
@@ -157,7 +157,7 @@ async def get_banner(uid: str, key: str):
         raise HTTPException(status_code=400, detail="UID required")
 
     try:
-        resp = await client.get(f"{INFO_API_URL}?uid={uid}&key=@yashapis")
+        resp = await client.get(f"{INFO_API_URL}?uid={uid}&key=AJAY")
         resp.raise_for_status()
         data = resp.json()
 
