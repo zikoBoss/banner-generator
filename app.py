@@ -60,10 +60,10 @@ def bytes_to_image(img_bytes):
         return Image.open(io.BytesIO(img_bytes)).convert("RGBA")
     return Image.new('RGBA', (100, 100), (0, 0, 0, 0))
 
-def process_banner_image(data, avatar_bytes, banner_bytes, pin_bytes):
+# تم تعديل هذه الدالة: إزالة pin_bytes وكل ما يتعلق بالـ PIN
+def process_banner_image(data, avatar_bytes, banner_bytes):
     avatar_img = bytes_to_image(avatar_bytes)
     banner_img = bytes_to_image(banner_bytes)
-    pin_img = bytes_to_image(pin_bytes)
 
     level = str(data.get("AccountLevel", "0"))
     name = data.get("AccountName", "Unknown")
@@ -113,10 +113,7 @@ def process_banner_image(data, avatar_bytes, banner_bytes, pin_bytes):
     draw_text_with_stroke(text_x + 25, text_y, name, font_large, 4)
     draw_text_with_stroke(text_x + 25, text_y + 200, guild, font_small, 3)
 
-    if pin_img and pin_img.size != (100, 100):
-        pin_size = 130
-        pin_img = pin_img.resize((pin_size, pin_size), Image.LANCZOS)
-        combined.paste(pin_img, (0, TARGET_HEIGHT - pin_size), pin_img)
+    # إزالة كود لصق الـ PIN هنا
 
     level_txt = f"Lvl.{level}"
     try:
@@ -166,15 +163,14 @@ async def get_banner(uid: str, key: str):
 
         avatar_id = basic_info.get("headPic")
         banner_id = basic_info.get("bannerId")
-        pin_id = basic_info.get("title")
+        # تم إزالة pin_id تماماً
 
+        # جلب الصورتين فقط
         avatar_task = fetch_image_bytes(avatar_id)
         banner_task = fetch_image_bytes(banner_id)
-        pin_task = fetch_image_bytes(pin_id) if (pin_id and str(pin_id) != "0") else asyncio.sleep(0)
 
-        results = await asyncio.gather(avatar_task, banner_task, pin_task)
-        avatar_bytes, banner_bytes, pin_bytes = results[0], results[1], results[2]
-        if pin_bytes is None: pin_bytes = b''
+        results = await asyncio.gather(avatar_task, banner_task)
+        avatar_bytes, banner_bytes = results[0], results[1]
 
         loop = asyncio.get_event_loop()
         banner_data = {
@@ -183,10 +179,11 @@ async def get_banner(uid: str, key: str):
             "GuildName": clan_info.get("clanName") or ""
         }
 
+        # استدعاء الدالة المعدلة (بدون pin_bytes)
         img_io = await loop.run_in_executor(
             process_pool,
             process_banner_image,
-            banner_data, avatar_bytes, banner_bytes, pin_bytes
+            banner_data, avatar_bytes, banner_bytes
         )
 
         return Response(
