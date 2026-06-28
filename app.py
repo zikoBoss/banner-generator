@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 app = FastAPI()
 
-# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,9 +16,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- CONFIG ---
-API_KEY = "ziko"  # المفتاح السري
-INFO_API_URL = "https://ajay-new-all-region-info-api.vercel.app/ajay-info"
+API_KEY = "ziko"
+INFO_API_URL = "https://info.killersharmabot.online/player-info"
 ITEM_API_URL = "https://mafu-icon-api.onrender.com/icon?key=MAFU&item_id="
 FONT_FILE = "NotoSans-Bold.ttf"
 
@@ -30,8 +28,6 @@ client = httpx.AsyncClient(
 )
 
 process_pool = ThreadPoolExecutor(max_workers=4)
-
-# --- UTILS ---
 
 def load_unicode_font(size):
     try:
@@ -60,7 +56,6 @@ def bytes_to_image(img_bytes):
         return Image.open(io.BytesIO(img_bytes)).convert("RGBA")
     return Image.new('RGBA', (100, 100), (0, 0, 0, 0))
 
-# تم تعديل هذه الدالة: إزالة pin_bytes وكل ما يتعلق بالـ PIN
 def process_banner_image(data, avatar_bytes, banner_bytes):
     avatar_img = bytes_to_image(avatar_bytes)
     banner_img = bytes_to_image(banner_bytes)
@@ -113,8 +108,6 @@ def process_banner_image(data, avatar_bytes, banner_bytes):
     draw_text_with_stroke(text_x + 25, text_y, name, font_large, 4)
     draw_text_with_stroke(text_x + 25, text_y + 200, guild, font_small, 3)
 
-    # إزالة كود لصق الـ PIN هنا
-
     level_txt = f"Lvl.{level}"
     try:
         bbox = draw.textbbox((0, 0), level_txt, font=font_level)
@@ -134,8 +127,6 @@ def process_banner_image(data, avatar_bytes, banner_bytes):
     img_io.seek(0)
     return img_io
 
-# --- ROUTES ---
-
 @app.get("/")
 async def home():
     return {
@@ -146,7 +137,6 @@ async def home():
 
 @app.get("/profile")
 async def get_banner(uid: str, key: str):
-    # التحقق من المفتاح
     if key != API_KEY:
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
@@ -154,7 +144,7 @@ async def get_banner(uid: str, key: str):
         raise HTTPException(status_code=400, detail="UID required")
 
     try:
-        resp = await client.get(f"{INFO_API_URL}?uid={uid}&key=AJAY")
+        resp = await client.get(f"{INFO_API_URL}?uid={uid}")
         resp.raise_for_status()
         data = resp.json()
 
@@ -163,9 +153,7 @@ async def get_banner(uid: str, key: str):
 
         avatar_id = basic_info.get("headPic")
         banner_id = basic_info.get("bannerId")
-        # تم إزالة pin_id تماماً
 
-        # جلب الصورتين فقط
         avatar_task = fetch_image_bytes(avatar_id)
         banner_task = fetch_image_bytes(banner_id)
 
@@ -179,7 +167,6 @@ async def get_banner(uid: str, key: str):
             "GuildName": clan_info.get("clanName") or ""
         }
 
-        # استدعاء الدالة المعدلة (بدون pin_bytes)
         img_io = await loop.run_in_executor(
             process_pool,
             process_banner_image,
@@ -198,13 +185,11 @@ async def get_banner(uid: str, key: str):
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- SHUTDOWN ---
 @app.on_event("shutdown")
 async def shutdown_event():
     await client.aclose()
     process_pool.shutdown()
 
-# --- RUN SERVER ---
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5000)
