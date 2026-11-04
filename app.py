@@ -27,9 +27,10 @@ ITEM_API_URL = "https://mafu-icon-api.onrender.com/icon?key=MAFU&item_id="
 
 FONT_FILE = "NotoSans-Bold.ttf"
 
+# Unlimited timeout for both Info API and Icon API
 client = httpx.AsyncClient(
     headers={"User-Agent": "Mozilla/5.0"},
-    timeout=10.0,
+    timeout=None,
     follow_redirects=True
 )
 
@@ -264,7 +265,7 @@ async def get_banner(uid: str, key: str):
         )
 
     try:
-        # Fetch player information from the new API
+        # Fetch player information without timeout
         resp = await client.get(
             INFO_API_URL,
             params={"uid": uid}
@@ -293,7 +294,7 @@ async def get_banner(uid: str, key: str):
             "GuildName": clan_info.get("clanName") or ""
         }
 
-        # Fetch avatar and banner icons
+        # Fetch avatar and banner icons without timeout
         avatar_task = fetch_image_bytes(avatar_id)
         banner_task = fetch_image_bytes(banner_id)
 
