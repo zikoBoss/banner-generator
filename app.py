@@ -2,6 +2,7 @@
 import io
 import os
 import asyncio
+import unicodedata
 import httpx
 from fastapi import FastAPI, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,23 +54,64 @@ def load_unicode_font(size):
         return ImageFont.load_default()
 
 
-async def fetch_image_bytes(item_id):
+async def fetch_image_bytes(item_id, retries=3):
     if not item_id or str(item_id) == "0":
         return None
 
     item_id = str(item_id)
     url = f"{ITEM_API_URL}{item_id}"
 
-    try:
-        resp = await client.get(url)
+    for attempt in range(retries + 1):
+        try:
+            resp = await client.get(url)
 
-        if resp.status_code == 200:
-            return resp.content
+            if resp.status_code == 200:
+                return resp.content
 
-    except Exception as e:
-        print(f"Image fetch error ({item_id}): {e}")
+            if resp.status_code == 404:
+                return None
+
+            print(
+                f"Image fetch {resp.status_code} "
+                f"({item_id}) attempt {attempt + 1}"
+            )
+
+        except Exception as e:
+            print(f"Image fetch error ({item_id}): {e}")
+
+        if attempt < retries:
+            # The icon API sleeps on Render's free tier and answers 502
+            # while waking up: wait longer between attempts.
+            await asyncio.sleep(8 * (attempt + 1))
 
     return None
+
+
+def clean_display_text(text):
+    """Make a player/clan name renderable with the banner font: NFKC folds
+    fullwidth characters to ASCII, and characters no font can render
+    (private-use Apple logo, Hangul filler, enclosed letters) are dropped
+    instead of showing as empty boxes."""
+    text = unicodedata.normalize("NFKC", str(text or ""))
+    kept = []
+
+    for ch in text:
+        o = ord(ch)
+
+        if o < 0x20:
+            continue
+        if 0xE000 <= o <= 0xF8FF:  # private use (e.g. Apple logo)
+            continue
+        if o == 0x3164:  # Hangul filler
+            continue
+        if 0x1100 <= o <= 0x11FF:  # Hangul Jamo (NFKC turns the filler into U+1160)
+            continue
+        if 0x2460 <= o <= 0x24FF:  # enclosed alphanumerics (e.g. Ⓥ)
+            continue
+
+        kept.append(ch)
+
+    return "".join(kept).strip()
 
 
 def bytes_to_image(img_bytes):
@@ -290,8 +332,12 @@ async def get_banner(uid: str, key: str):
 
         banner_data = {
             "AccountLevel": basic_info.get("level") or 0,
-            "AccountName": basic_info.get("nickname") or "Unknown",
-            "GuildName": clan_info.get("clanName") or ""
+            "AccountName": clean_display_text(
+                basic_info.get("nickname")
+            ) or "Unknown",
+            "GuildName": clean_display_text(
+                clan_info.get("clanName")
+            )
         }
 
         # Fetch avatar and banner icons without timeout
