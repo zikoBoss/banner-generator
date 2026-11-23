@@ -20,7 +20,7 @@ app.add_middleware(
 API_KEY = "ziko"
 
 # New player information API
-INFO_API_URL = "https://mahir-info-api.vercel.app/info"
+INFO_API_URL = "https://api-info-by-xalinas-12.vercel.app/player-info"
 
 # Keep the existing icon API
 ITEM_API_URL = "https://mafu-icon-api.onrender.com/icon?key=MAFU&item_id="
