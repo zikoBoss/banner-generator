@@ -1,0 +1,23 @@
+# Keeps the mafu icon API awake: Render's free tier sleeps the service
+# after 15 minutes without traffic, and waking it takes ~60s, which the
+# outfit/banner image endpoints cannot always wait out. A small request
+# every 10 minutes counts as traffic and prevents the sleep.
+# Runs on GitHub's free Actions minutes (public repo). If the repo has no
+# pushes for 60 days GitHub pauses scheduled runs automatically.
+name: Keep icon API warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping icon API
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 "https://mafu-icon-api.onrender.com/icon?key=MAFU&item_id=902000042")
+          echo "icon API status: $code"
+          if [ "$code" != "200" ]; then echo "warning: icon API returned $code (will retry on the next run)"; fi
+          exit 0
